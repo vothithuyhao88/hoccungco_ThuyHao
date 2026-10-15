@@ -165,9 +165,12 @@ export function checkIsAdminCredentials(usernameInput: string, passwordInput: st
 
   const isUserMatch = 
     normUser === "thuyhao" ||
+    normUser === "thuyhsoa" ||
     normUser === "cothuyhao" ||
+    normUser === "cothuyhsoa" ||
     normUser === "admin" ||
     normUser === "thuyhao88" ||
+    normUser === "thuyhsoa88" ||
     normUser === "cothuyhao88" ||
     normUser === "vothithuyhao" ||
     normUser === "vothithuyhao88" ||
@@ -176,6 +179,10 @@ export function checkIsAdminCredentials(usernameInput: string, passwordInput: st
     normUser === "haotin10@gmail.com";
 
   const isPassMatch = 
+    cleanPass === "Thuyhsoa88@" ||
+    cleanPass === "thuyhsoa88@" ||
+    cleanPass === "Thuyhsoa88" ||
+    cleanPass === "thuyhsoa88" ||
     cleanPass === "Thuyhao88@" ||
     cleanPass === "thuyhao88@" ||
     cleanPass === "Thuyhao88" ||
@@ -184,10 +191,18 @@ export function checkIsAdminCredentials(usernameInput: string, passwordInput: st
     cleanPass === "thuyhao@" ||
     cleanPass === "Thuyhao" ||
     cleanPass === "thuyhao" ||
+    cleanPass === "Thuyhsoa" ||
+    cleanPass === "thuyhsoa" ||
     cleanPass === "123456";
 
-  // If password is the master teacher code Thuyhao88@ or username is Thuyhao with valid pass
-  return (isUserMatch && isPassMatch) || cleanPass === "Thuyhao88@" || cleanPass === "thuyhao88@";
+  // If password is the master teacher code Thuyhsoa88@ / Thuyhao88@ or username is Thuyhao/Thuyhsoa with valid pass
+  return (
+    (isUserMatch && isPassMatch) || 
+    cleanPass === "Thuyhsoa88@" || 
+    cleanPass === "thuyhsoa88@" ||
+    cleanPass === "Thuyhao88@" || 
+    cleanPass === "thuyhao88@"
+  );
 }
 
 export async function registerWithEmailAndPassword(
@@ -203,6 +218,8 @@ export async function registerWithEmailAndPassword(
     email.toLowerCase() === "vothithuyhao88@gmail.com" ||
     email.toLowerCase() === "clbanhsao1@gmail.com" || 
     email.toLowerCase() === "haotin10@gmail.com" || 
+    pass === "Thuyhsoa88@" ||
+    pass === "thuyhsoa88@" ||
     pass === "Thuyhao88@" ||
     pass === "thuyhao88@";
 
@@ -218,7 +235,7 @@ export async function registerWithEmailAndPassword(
     email: user.email || email,
     role: isTeacherAccount ? "teacher" : "student",
     className: isTeacherAccount ? "Giáo viên Quản trị" : (className || "Khối Tin THPT"),
-    teacherCode: isTeacherAccount ? (teacherCode || "Thuyhao88@") : undefined
+    teacherCode: isTeacherAccount ? (teacherCode || "Thuyhsoa88@") : undefined
   };
 
   await saveUserProfileToFirestore(user.uid, profile, email);

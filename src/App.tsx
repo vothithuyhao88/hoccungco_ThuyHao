@@ -70,26 +70,26 @@ export default function App() {
   const [isMaterialsOpen, setIsMaterialsOpen] = useState(false);
   const [isAISettingsOpen, setIsAISettingsOpen] = useState(false);
   
-  // Set default logged in with Admin account: Thuyhao / Thuyhao88@
+  // User profile state from localStorage
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem("app_user_profile");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && (parsed.role === "teacher" || parsed.fullName?.includes("Thúy Hào") || parsed.fullName?.includes("Thuý Hào"))) {
+        if (parsed && (parsed.role === "teacher" || parsed.role === "student")) {
           return parsed;
         }
       } catch (e) {
         // ignore
       }
     }
-    // Default to admin account Thuyhao
-    localStorage.setItem("app_user_profile", JSON.stringify(ADMIN_DEFAULT_PROFILE));
-    return ADMIN_DEFAULT_PROFILE;
+    return null;
   });
 
-  // Since user is logged in as Admin, keep auth modal closed on start
-  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  // If user has not logged in yet, show the login modal
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(() => {
+    return !localStorage.getItem("app_user_profile");
+  });
 
   // Listen for Firebase Auth state changes and fetch Global AI Config
   useEffect(() => {
