@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile information for students and teachers",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "fullName": { "type": "string", "maxLength": 100 },
+        "className": { "type": "string", "maxLength": 50 },
+        "role": { "type": "string", "enum": ["student", "teacher"] },
+        "email": { "type": "string", "maxLength": 100 },
+        "avatarUrl": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "fullName", "role"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "Messages exchanged between student/user and Cô Thuý Hào AI assistant",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "maxLength": 5000 },
+        "sender": { "type": "string", "enum": ["user", "teacher"] },
+        "userId": { "type": "string" },
+        "userName": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["text", "sender", "userId"]
+    },
+    "QuizResult": {
+      "title": "Quiz Result",
+      "description": "Student quiz scores and practice results",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string", "maxLength": 100 },
+        "userClass": { "type": "string", "maxLength": 50 },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" },
+        "grade": { "type": "string" },
+        "topicId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "score", "totalQuestions"]
+    },
+    "LessonChapter": {
+      "title": "Lesson Chapter",
+      "description": "Study chapters and lessons",
+      "type": "object",
+      "properties": {
+        "grade": { "type": "string", "enum": ["10", "11", "12"] },
+        "topic": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "content": { "type": "string" }
+      },
+      "required": ["grade", "topic", "title"]
+    },
+    "AIConfigSettings": {
+      "title": "AI Configuration Settings",
+      "description": "Global AI configuration settings stored on Firestore",
+      "type": "object",
+      "properties": {
+        "apiKey": { "type": "string" },
+        "defaultModel": { "type": "string" },
+        "updatedBy": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["apiKey"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles collection"
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Chat messages collection"
+    },
+    "/quiz_results/{resultId}": {
+      "schema": { "$ref": "#/entities/QuizResult" },
+      "description": "Quiz results collection"
+    },
+    "/lessons/{lessonId}": {
+      "schema": { "$ref": "#/entities/LessonChapter" },
+      "description": "Lessons and study materials collection"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/AIConfigSettings" },
+      "description": "Global settings document for application AI configuration"
+    }
+  }
+}

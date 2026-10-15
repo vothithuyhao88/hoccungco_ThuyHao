@@ -1,0 +1,10 @@
+{
+  "name": "Remix Học cùng cô Thuý Hào_tháng 10",
+  "description": "Trợ lý học tập môn Tin học THPT nhiệt tình, thân thiện, kiên nhẫn. Cô Thuý Hào sẽ hướng dẫn em học lập trình Python, CSDL/SQL, Excel, HTML/CSS và ôn luyện trắc nghiệm.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
