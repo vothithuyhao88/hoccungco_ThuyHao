@@ -7,6 +7,7 @@ import {
   School, 
   Lock, 
   CheckCircle, 
+  Sparkles, 
   LogOut, 
   ShieldCheck,
   Mail,
@@ -15,7 +16,7 @@ import {
   EyeOff,
   Compass,
   ArrowRight,
-  ChevronLeft
+  UserCheck
 } from "lucide-react";
 import { UserProfile } from "../types";
 import { 
@@ -38,20 +39,7 @@ interface AuthModalProps {
   onLogout: () => void;
 }
 
-export const GRADE_CLASSES = [
-  {
-    gradeName: "Khối 10",
-    classes: ["10A1", "10A2", "10A3", "10A4"]
-  },
-  {
-    gradeName: "Khối 11",
-    classes: ["11A1", "11A2", "11A3", "11A4"]
-  },
-  {
-    gradeName: "Khối 12",
-    classes: ["12A1", "12A2", "12A3", "12A4", "12A5", "12A6"]
-  }
-];
+const COMMON_CLASSES = ["10A1", "10A2", "10A3", "11A1", "11A2", "11A3", "12A1", "12A2", "12A3"];
 
 export default function AuthModal({
   isOpen,
@@ -60,18 +48,17 @@ export default function AuthModal({
   onLogin,
   onLogout
 }: AuthModalProps) {
-  // Flag to hide/show Admin Login box. Hidden by default as requested:
-  // "khi đăng nhập, ô tài khoản quản trị ẩn, không được hiện thị các thông tin đã nhập trước đó"
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  // Main Tab: "user" (Học sinh / Người dùng) vs "admin" (Quản trị Cô Thuý Hào)
+  const [activeTab, setActiveTab] = useState<"user" | "admin">("user");
 
-  // Student Fast Entry state (Name + Class buttons)
+  // User / Student Fast Entry state (Name + Class)
   const [studentName, setStudentName] = useState("");
-  const [studentClass, setStudentClass] = useState("10A1");
+  const [studentClass, setStudentClass] = useState("11A1");
   const [loadingStudent, setLoadingStudent] = useState(false);
 
-  // Admin Login state: completely blank, no prefilled credentials, no history
-  const [adminUsername, setAdminUsername] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
+  // Admin Login state (Pre-filled with Thuyhao & Thuyhsoa88@)
+  const [adminUsername, setAdminUsername] = useState("Thuyhao");
+  const [adminPassword, setAdminPassword] = useState("Thuyhsoa88@");
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
 
@@ -83,7 +70,7 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  // 1. Handle Student Quick Login (Tên + Lớp qua các nút chọn lớp)
+  // 1. Handle Student Quick Login (Tên + Lớp không cần mật khẩu)
   const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
@@ -94,14 +81,14 @@ export default function AuthModal({
       setErrorMessage("Vui lòng nhập Họ và tên để lưu kết quả học tập!");
       return;
     }
-    const cls = studentClass.trim() || "10A1";
+    const cls = studentClass.trim() || "Khối Tin THPT";
 
     setLoadingStudent(true);
     try {
-      // If user typed admin username in the student name box, direct them to the hidden admin login
+      // Check if user accidentally entered admin name here
       if (checkIsAdminCredentials(name, "")) {
-        setShowAdminLogin(true);
-        setErrorMessage("Phát hiện tài khoản Quản trị, vui lòng nhập mật khẩu xác thực!");
+        setActiveTab("admin");
+        setErrorMessage("Phát hiện tài khoản Quản trị, vui lòng nhập mật khẩu bên tab Quản trị!");
         setLoadingStudent(false);
         return;
       }
@@ -166,13 +153,13 @@ export default function AuthModal({
       }, 500);
     } catch (err: any) {
       console.error("Google sign in error:", err);
-      setErrorMessage("Đăng nhập bằng Google không thành công. Em có thể nhập Tên + Lớp bên dưới!");
+      setErrorMessage("Đăng nhập bằng Google không thành công. Hãy thử nhập Tên + Lớp bên dưới!");
     } finally {
       setLoadingGoogle(false);
     }
   };
 
-  // 3. Handle Admin Login (Thuyhao / Thuyhao88@ or Thuyhsoa88@)
+  // 3. Handle Admin Login (Thuyhao / Thuyhsoa88@)
   const handleAdminLoginSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage("");
@@ -198,11 +185,7 @@ export default function AuthModal({
         setSuccessMessage("🎉 Đăng nhập Quản trị viên thành công! Xin chào Cô Thuý Hào.");
         onLogin(profile);
         
-        // Reset form credentials to guarantee no saved state lingering
-        setAdminUsername("");
-        setAdminPassword("");
-        
-        // Background Firebase sign in sync
+        // Trigger background Firebase sync
         loginWithEmailAndPassword(userTrim, passTrim).catch(() => {});
         
         setTimeout(() => {
@@ -211,8 +194,8 @@ export default function AuthModal({
         return;
       }
 
-      // If invalid admin credentials - no leakage of passwords or hints
-      setErrorMessage("Tên đăng nhập hoặc mật khẩu Quản trị không chính xác. Vui lòng kiểm tra lại!");
+      // If invalid admin credentials
+      setErrorMessage("Tên đăng nhập hoặc mật khẩu Quản trị không chính xác! (Gợi ý: Thuyhao / Thuyhsoa88@)");
     } catch (err: any) {
       setErrorMessage("Đăng nhập thất bại: " + (err.message || String(err)));
     } finally {
@@ -228,9 +211,6 @@ export default function AuthModal({
       console.error(err);
     }
     onLogout();
-    setShowAdminLogin(false);
-    setAdminUsername("");
-    setAdminPassword("");
   };
 
   return (
@@ -277,10 +257,10 @@ export default function AuthModal({
                   </span>
                 </div>
                 <h3 className="font-black text-white text-base sm:text-lg tracking-tight leading-snug">
-                  {currentUser ? "Cài Đặt Tài Khoản" : (showAdminLogin ? "Đăng Nhập Quản Trị Viên" : "Chào Mừng Đến Với Lớp Học Cô Thuý Hào!")}
+                  {currentUser ? "Cài Đặt Tài Khoản" : "Chào Mừng Đến Với Lớp Học Cô Thuý Hào!"}
                 </h3>
                 <p className="text-emerald-200/70 text-[11px] font-medium leading-tight mt-0.5">
-                  {showAdminLogin ? "Dành cho Quản trị viên / Giáo viên bộ môn" : "Đăng nhập nhanh tiện lợi bằng Google hoặc Tên + Lớp"}
+                  Đăng nhập nhanh tiện lợi cho Học sinh & Quản trị viên
                 </p>
               </div>
             </div>
@@ -325,14 +305,14 @@ export default function AuthModal({
                 )}
               </div>
 
-              {/* Status for Admin / Teacher or Switch */}
+              {/* Notice for Admin / Teacher or Fast Switch */}
               {currentUser.role === "teacher" ? (
                 <div className="bg-emerald-50 border border-emerald-200/80 p-3.5 rounded-2xl text-xs text-emerald-900 font-bold flex items-center justify-between shadow-3xs">
                   <div className="flex items-center gap-2 text-left">
                     <ShieldCheck size={20} className="text-emerald-600 shrink-0" />
                     <div>
                       <p className="font-extrabold text-emerald-950">Quyền Quản Trị Viên (Thuyhao)</p>
-                      <p className="text-[11px] text-emerald-700 font-medium">Toàn quyền quản trị hệ thống, cập nhật bài giảng & cấu hình AI</p>
+                      <p className="text-[11px] text-emerald-700 font-medium">Toàn quyền cấu hình Gemini API Key & quản lý bài giảng</p>
                     </div>
                   </div>
                   <span className="bg-emerald-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow-2xs shrink-0">
@@ -340,23 +320,26 @@ export default function AuthModal({
                   </span>
                 </div>
               ) : (
-                /* Discreet Switch to Admin Login for Teacher */
-                <div className="pt-2 text-center">
+                /* Switch to Admin Quick Button if user is currently student */
+                <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 p-4 rounded-2xl border border-emerald-500/40 text-white text-left space-y-2 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1">
+                      <ShieldCheck size={13} /> Chuyển Sang Quyền Quản Trị
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-200">Thuyhao</span>
+                  </div>
+                  <p className="text-xs text-slate-200">
+                    Cô Thuý Hào muốn đăng nhập tài khoản quản trị? Nhấn vào đây để chuyển ngay:
+                  </p>
                   <button
                     type="button"
-                    onClick={() => {
-                      onLogout();
-                      setShowAdminLogin(true);
-                      setAdminUsername("");
-                      setAdminPassword("");
-                      setErrorMessage("");
-                      setSuccessMessage("");
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-700 transition-colors py-1.5 px-3 rounded-xl hover:bg-slate-100 cursor-pointer"
+                    onClick={() => handleAdminLoginSubmit()}
+                    disabled={loadingAdmin}
+                    className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
                     id="switch-to-admin-btn"
                   >
-                    <Lock size={13} />
-                    <span>Chuyển sang Đăng nhập Quản trị viên</span>
+                    <ShieldCheck size={16} />
+                    <span>{loadingAdmin ? "Đang chuyển..." : "Đăng Nhập Quản Trị (Thuyhao / Thuyhsoa88@)"}</span>
                   </button>
                 </div>
               )}
@@ -375,6 +358,45 @@ export default function AuthModal({
           ) : (
             /* Logged-Out Main View */
             <div className="space-y-4">
+              {/* Top Segmented Controls: Học Sinh / Người Dùng vs Quản Trị Viên */}
+              <div className="grid grid-cols-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/70 shadow-3xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("user");
+                    setErrorMessage("");
+                    setSuccessMessage("");
+                  }}
+                  className={`py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    activeTab === "user"
+                      ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md scale-102"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                  id="auth-tab-user"
+                >
+                  <GraduationCap size={16} />
+                  <span>Học Sinh / Người Dùng</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("admin");
+                    setErrorMessage("");
+                    setSuccessMessage("");
+                  }}
+                  className={`py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    activeTab === "admin"
+                      ? "bg-gradient-to-r from-slate-950 via-slate-900 to-teal-950 text-emerald-300 shadow-md border border-emerald-500/40 scale-102"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                  id="auth-tab-admin"
+                >
+                  <ShieldCheck size={16} className={activeTab === "admin" ? "text-emerald-400" : ""} />
+                  <span>Quản Trị Viên</span>
+                </button>
+              </div>
+
               {/* Status Banner Messages */}
               {errorMessage && (
                 <motion.div 
@@ -396,101 +418,9 @@ export default function AuthModal({
                 </motion.div>
               )}
 
-              {/* ================= ADMIN LOGIN SECTION (HIDDEN BY DEFAULT) ================= */}
-              {showAdminLogin ? (
-                <div className="space-y-4 bg-gradient-to-b from-slate-950 via-slate-900 to-teal-950 p-5 rounded-2xl border border-emerald-500/40 text-white shadow-xl animate-fadeIn" id="admin-login-container">
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 border border-emerald-500/30">
-                        <ShieldCheck size={22} />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-black text-white uppercase tracking-wider">Đăng Nhập Quản Trị Viên</h4>
-                        <p className="text-[11px] text-emerald-200/70 font-medium">Cô Thuý Hào • Quản trị hệ thống</p>
-                      </div>
-                    </div>
-
-                    {/* Back to student login button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAdminLogin(false);
-                        setAdminUsername("");
-                        setAdminPassword("");
-                        setErrorMessage("");
-                      }}
-                      className="text-xs text-slate-300 hover:text-white flex items-center gap-1 py-1 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all cursor-pointer"
-                      id="back-to-student-btn"
-                    >
-                      <ChevronLeft size={14} />
-                      <span>Quay lại</span>
-                    </button>
-                  </div>
-
-                  {/* Form with autocomplete off, zero prefilled info, zero leakage */}
-                  <form onSubmit={handleAdminLoginSubmit} className="space-y-3.5" id="admin-login-form" autoComplete="off">
-                    <div>
-                      <label className="block text-[11px] font-extrabold text-emerald-200 mb-1">
-                        Tên Đăng Nhập Quản Trị
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        autoComplete="off"
-                        autoCorrect="off"
-                        autoCapitalize="off"
-                        spellCheck={false}
-                        placeholder="Nhập tên đăng nhập..."
-                        value={adminUsername}
-                        onChange={(e) => setAdminUsername(e.target.value)}
-                        className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl px-3.5 py-2.5 text-xs text-white font-semibold focus:outline-none placeholder:text-slate-500 transition-all"
-                        id="admin-username-input"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-extrabold text-emerald-200 mb-1">
-                        Mật Khẩu Quản Trị
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showAdminPassword ? "text" : "password"}
-                          required
-                          autoComplete="new-password"
-                          autoCorrect="off"
-                          autoCapitalize="off"
-                          spellCheck={false}
-                          placeholder="••••••••••••"
-                          value={adminPassword}
-                          onChange={(e) => setAdminPassword(e.target.value)}
-                          className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 rounded-xl px-3.5 py-2.5 pr-10 text-xs text-white font-semibold focus:outline-none placeholder:text-slate-500 transition-all"
-                          id="admin-password-input"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
-                          title={showAdminPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                        >
-                          {showAdminPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loadingAdmin}
-                      className="w-full py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 mt-3 active:scale-98"
-                      id="submit-admin-login-btn"
-                    >
-                      <LogIn size={16} />
-                      <span>{loadingAdmin ? "Đang xác thực..." : "🔐 Xác Nhận Đăng Nhập Quản Trị"}</span>
-                    </button>
-                  </form>
-                </div>
-              ) : (
-                /* ================= USER / STUDENT ENTRY (DEFAULT ACTIVE VIEW) ================= */
-                <div className="space-y-4 animate-fadeIn" id="student-login-container">
+              {/* ================= TAB 1: HỌC SINH / NGƯỜI DÙNG ================= */}
+              {activeTab === "user" && (
+                <div className="space-y-4 animate-fadeIn">
                   {/* Option 1: Fast Google Login */}
                   <div>
                     <button
@@ -509,7 +439,7 @@ export default function AuthModal({
                       <span>{loadingGoogle ? "Đang kết nối tài khoản Google..." : "Đăng Nhập Bằng Tài Khoản Google (1 Chạm)"}</span>
                     </button>
                     <p className="text-[10px] text-slate-400 text-center mt-1">
-                      * Tự động đồng bộ tên, avatar và kết quả làm bài trắc nghiệm.
+                      * Tự động lưu tiến độ, đồng bộ tên & hình ảnh từ tài khoản Google.
                     </p>
                   </div>
 
@@ -517,11 +447,11 @@ export default function AuthModal({
                   <div className="relative flex items-center justify-center">
                     <div className="border-t border-slate-200 w-full"></div>
                     <span className="bg-white px-3 text-[10px] uppercase font-black tracking-wider text-slate-400 shrink-0">
-                      hoặc nhập Tên + Chọn Lớp vào học ngay
+                      hoặc nhập Tên + Lớp vào học ngay
                     </span>
                   </div>
 
-                  {/* Option 2: Enter Name + Select Class buttons */}
+                  {/* Option 2: Enter Name + Class form */}
                   <form onSubmit={handleStudentLogin} className="space-y-3.5 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100 shadow-3xs" id="student-entry-form">
                     <div className="flex items-center gap-2 pb-1 text-emerald-900 font-extrabold text-xs">
                       <Compass size={16} className="text-emerald-600" />
@@ -545,63 +475,37 @@ export default function AuthModal({
                     </div>
 
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-[11px] font-extrabold text-slate-700 flex items-center gap-1">
-                          <School size={13} className="text-emerald-600" />
-                          Chọn Lớp học của em <span className="text-red-500">*</span>
-                        </label>
-                        <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
-                          Đang chọn: {studentClass}
-                        </span>
-                      </div>
+                      <label className="block text-[11px] font-extrabold text-slate-700 mb-1 flex items-center gap-1">
+                        <School size={13} className="text-emerald-600" />
+                        Lớp học <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ví dụ: 10A1, 11A2, 12A3..."
+                        value={studentClass}
+                        onChange={(e) => setStudentClass(e.target.value)}
+                        className="w-full bg-white border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/20 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-semibold focus:outline-none transition-all shadow-3xs mb-2"
+                        id="student-class-input"
+                      />
 
-                      {/* Interactive Buttons for classes:
-                          10A1, 10A2, 10A3, 10A4
-                          11A1, 11A2, 11A3, 11A4
-                          12A1, 12A2, 12A3, 12A4, 12A5, 12A6 */}
-                      <div className="space-y-2.5">
-                        {GRADE_CLASSES.map((grp) => (
-                          <div key={grp.gradeName} className="bg-white/95 p-2.5 rounded-xl border border-slate-200/80 shadow-3xs">
-                            <div className="text-[10px] font-black text-slate-500 uppercase tracking-wide px-1 mb-1.5 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                              <span>{grp.gradeName}</span>
-                            </div>
-                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-                              {grp.classes.map((cls) => {
-                                const isSelected = studentClass === cls;
-                                return (
-                                  <button
-                                    type="button"
-                                    key={cls}
-                                    onClick={() => setStudentClass(cls)}
-                                    className={`py-2 px-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 select-none active:scale-95 ${
-                                      isSelected
-                                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md ring-2 ring-emerald-500/70 scale-102"
-                                        : "bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 hover:border-emerald-300 font-bold"
-                                    }`}
-                                    id={`class-btn-${cls}`}
-                                  >
-                                    {isSelected && <CheckCircle size={12} className="text-white shrink-0" />}
-                                    <span>{cls}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
+                      {/* Quick Class Selection Chips */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] text-slate-500 font-bold mr-1">Chọn nhanh:</span>
+                        {COMMON_CLASSES.map((cls) => (
+                          <button
+                            type="button"
+                            key={cls}
+                            onClick={() => setStudentClass(cls)}
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                              studentClass === cls
+                                ? "bg-emerald-600 text-white shadow-xs"
+                                : "bg-white text-slate-600 border border-slate-200 hover:border-emerald-400"
+                            }`}
+                          >
+                            {cls}
+                          </button>
                         ))}
-                      </div>
-
-                      {/* Optional custom class input */}
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-[10px] text-slate-400 font-semibold shrink-0">Hoặc tự nhập:</span>
-                        <input
-                          type="text"
-                          placeholder="Nhập tên lớp khác..."
-                          value={studentClass}
-                          onChange={(e) => setStudentClass(e.target.value)}
-                          className="flex-1 bg-white border border-slate-200 focus:border-emerald-500 rounded-lg px-2.5 py-1 text-xs text-slate-700 font-semibold focus:outline-none"
-                          id="student-class-custom-input"
-                        />
                       </div>
                     </div>
 
@@ -615,27 +519,103 @@ export default function AuthModal({
                       <span>{loadingStudent ? "Đang lưu thông tin..." : "🚀 Vào Học Ngay (Lưu Bảng Điểm & Ôn Tập)"}</span>
                     </button>
                   </form>
+                </div>
+              )}
 
-                  {/* Discreet Admin Login Trigger - Hidden by default */}
-                  <div className="pt-2 text-center border-t border-slate-100 flex items-center justify-between px-1">
-                    <span className="text-[11px] text-slate-400 font-medium">Giáo viên bộ môn:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAdminLogin(true);
-                        setAdminUsername("");
-                        setAdminPassword("");
-                        setErrorMessage("");
-                        setSuccessMessage("");
-                      }}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-700 transition-colors py-1 px-2.5 rounded-lg hover:bg-slate-100 cursor-pointer"
-                      id="toggle-admin-login-btn"
-                      title="Mở giao diện đăng nhập Quản trị viên"
-                    >
-                      <Lock size={12} className="text-slate-400" />
-                      <span>Đăng nhập Quản trị viên</span>
-                    </button>
+              {/* ================= TAB 2: QUẢN TRỊ VIÊN ================= */}
+              {activeTab === "admin" && (
+                <div className="space-y-4 bg-gradient-to-b from-slate-950 via-slate-900 to-teal-950 p-5 rounded-2xl border border-emerald-500/40 text-white shadow-xl animate-fadeIn">
+                  <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                    <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 border border-emerald-500/30 shadow-inner">
+                      <ShieldCheck size={24} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-white uppercase tracking-wider">Khu Vực Quản Trị Viên</h4>
+                      <p className="text-[11px] text-emerald-200/70 font-medium">Cô Thuý Hào • Toàn quyền quản trị hệ thống</p>
+                    </div>
                   </div>
+
+                  {/* Pre-filled Account Callout */}
+                  <div className="bg-emerald-950/70 border border-emerald-500/30 p-3 rounded-xl text-[11px] text-emerald-300 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span>Tên đăng nhập: <strong className="text-white font-mono font-bold">Thuyhao</strong></span>
+                      <span>Mật khẩu: <strong className="text-white font-mono font-bold">Thuyhsoa88@</strong></span>
+                    </div>
+                    <p className="text-[10px] text-emerald-400/80 font-normal">
+                      * Chấp nhận cả <code>Thuyhsoa88@</code> và <code>Thuyhao88@</code>.
+                    </p>
+                  </div>
+
+                  {/* Direct 1-Click Login Button for Admin */}
+                  <button
+                    type="button"
+                    onClick={() => handleAdminLoginSubmit()}
+                    disabled={loadingAdmin}
+                    className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                    id="quick-one-click-admin-btn"
+                  >
+                    <Sparkles size={15} />
+                    <span>{loadingAdmin ? "Đang xác thực..." : "⚡ Đăng Nhập 1-Chạm Ngay (Thuyhao)"}</span>
+                  </button>
+
+                  <div className="relative flex items-center justify-center my-1">
+                    <div className="border-t border-white/10 w-full"></div>
+                    <span className="bg-slate-900 px-2 text-[9px] uppercase font-bold text-slate-400 shrink-0">
+                      hoặc nhập thủ công
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleAdminLoginSubmit} className="space-y-3" id="admin-login-form">
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-emerald-200 mb-1">
+                        Tên Đăng Nhập Quản Trị
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Thuyhao"
+                        value={adminUsername}
+                        onChange={(e) => setAdminUsername(e.target.value)}
+                        className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-400 rounded-xl px-3.5 py-2.5 text-xs text-white font-semibold focus:outline-none placeholder:text-slate-500"
+                        id="admin-username-input"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-extrabold text-emerald-200 mb-1">
+                        Mật Khẩu Quản Trị
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showAdminPassword ? "text" : "password"}
+                          required
+                          placeholder="Thuyhsoa88@"
+                          value={adminPassword}
+                          onChange={(e) => setAdminPassword(e.target.value)}
+                          className="w-full bg-slate-800/90 border border-slate-700 focus:border-emerald-400 rounded-xl px-3.5 py-2.5 pr-10 text-xs text-white font-semibold focus:outline-none placeholder:text-slate-500"
+                          id="admin-password-input"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                          title={showAdminPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                        >
+                          {showAdminPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loadingAdmin}
+                      className="w-full py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 mt-2 active:scale-98"
+                      id="submit-admin-login-btn"
+                    >
+                      <LogIn size={16} />
+                      <span>{loadingAdmin ? "Đang xác thực..." : "Đăng Nhập Quyền Quản Trị"}</span>
+                    </button>
+                  </form>
                 </div>
               )}
             </div>

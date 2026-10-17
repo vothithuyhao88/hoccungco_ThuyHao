@@ -149,7 +149,7 @@ export const ADMIN_DEFAULT_PROFILE: UserProfile = {
   role: "teacher",
   className: "Giáo viên Quản trị",
   email: "vothithuyhao88@gmail.com",
-  teacherCode: "Thuyhao88@"
+  teacherCode: "Thuyhsoa88@"
 };
 
 export function checkIsAdminCredentials(usernameInput: string, passwordInput: string): boolean {
